@@ -1,28 +1,28 @@
-// In src/users/services/users.service.ts
-import { ConflictException, Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import { Model } from 'mongoose';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { CreateUserDto, User } from '../models/users.schema'; // DTO is inside the schema
+import { Model } from 'mongoose';
+import { User, CreateUserDto } from '../models/users.schema';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  constructor(@InjectModel('User') private userModel: Model<User>) {}
 
-  async registerUser(createUserDto: CreateUserDto): Promise<any> {
-    // Check if user exists by email
-    const existingUser = await this.userModel.findOne({ email: createUserDto.email });
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userModel.findOne({ email }).exec();
+  }
+
+  async create(userDto: CreateUserDto): Promise<any> {
+    const existingUser = await this.findByEmail(userDto.email);
     if (existingUser) {
-      throw new ConflictException('User with that email already exists');
+      throw new ConflictException('Email already exists');
     }
-
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    const createdUser = new this.userModel({ ...createUserDto, password: hashedPassword });
-    const user = await createdUser.save();
-    // Convert Mongoose document to plain object and remove the password
-    const userObj = user.toObject() as { password?: string };
-    delete userObj.password;
-    return userObj;
+    const hashedPassword = await bcrypt.hash(userDto.password, 10);
+    const user = new this.userModel({ ...userDto, password: hashedPassword });
+    const savedUser = await user.save();
+    
+    // Convert document to plain object and exclude the password using destructuring
+    const { password, ...userWithoutPassword } = savedUser.toObject();
+    return userWithoutPassword;
   }
 }
