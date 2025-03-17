@@ -21,13 +21,19 @@ export class TasksController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  updateTask(@Param('id') id: string, @Body() body: { title?: string; description?: string; status?: string }) {
-    return this.tasksService.updateTask(id, body);
+  updateTask(@Param('id') id: string, @Body() body: { title?: string; description?: string; status?: string }, @Request() req) {
+    return this.tasksService.updateTask(id, body, req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  deleteTask(@Param('id') id: string) {
-    return { message: 'Task deleted successfully' };
+  async deleteTask(@Param('id') id: string, @Request() req) {
+    return await this.tasksService.deleteTask(id, req.user.userId);
+  }
+  
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  getTaskById(@Param('id') id: string, @Request() req) {
+    return this.tasksService.getTaskById(id, req.user.userId);
   }
 }

@@ -27,19 +27,34 @@ export class TasksService {
     return task.save();
   }
 
-  async updateTask(id: string, updateDto: { title?: string; description?: string; status?: string }): Promise<Task> {
-    const updatedTask = await this.taskModel.findByIdAndUpdate(id, updateDto, { new: true }).exec();
+  async updateTask(id: string, updateDto: { title?: string; description?: string; status?: string }, userId: string): Promise<Task> {
+    const updatedTask = await this.taskModel.findOneAndUpdate(
+      { _id: id, user_id: userId },
+      updateDto,
+      { new: true }
+    ).exec();
     if (!updatedTask) {
-      throw new NotFoundException(`Task with ID ${id} not found`);
+      throw new NotFoundException(`Task with ID ${id} not found or not owned by user`);
     }
     return updatedTask;
   }
 
-  async deleteTask(id: string): Promise<Task> {
-    const deletedTask = await this.taskModel.findByIdAndDelete(id).exec();
-    if (!deletedTask) {
-      throw new NotFoundException(`Task with ID ${id} not found`);
+  async deleteTask(taskId: string, userId: string): Promise<{ message: string }> {
+    // Find the task with both the ID and the owner ID.
+    const task = await this.taskModel.findOne({ _id: taskId, user_id: userId });
+    if (!task) {
+      throw new NotFoundException('Task not found or you are not authorized to delete this task');
     }
-    return deletedTask;
+    await this.taskModel.findByIdAndDelete(taskId);
+    return { message: 'Task deleted successfully' };
+  }
+  
+
+  async getTaskById(id: string, userId: string): Promise<Task> {
+    const task = await this.taskModel.findOne({ _id: id, user_id: userId }).exec();
+    if (!task) {
+      throw new NotFoundException(`Task with ID ${id} not found or not owned by user`);
+    }
+    return task;
   }
 }
